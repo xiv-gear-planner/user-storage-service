@@ -1,0 +1,22 @@
+oracle-nosql:
+  mode: local
+  endpoint: "http://localhost:9050/"
+  createTables: true
+  tables:
+    userData:
+      name: "userdata_test"
+    sheets:
+      name: "sheets_test"
+
+micronaut:
+  security:
+    #    authentication: bearer
+    token:
+      generator:
+        access-token:
+          expiration: 7200
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: fakeTokenForTestsDoNotTrustFooooooooooooooooooooooo

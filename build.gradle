@@ -1,0 +1,101 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+
+plugins {
+	id "groovy"
+	id("io.micronaut.application") version "4.5.3"
+	id("com.gradleup.shadow") version "8.3.6"
+	id("io.micronaut.aot") version "4.5.3"
+}
+
+version = "0.1"
+group = "app.xivgear"
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation "io.micronaut.groovy:micronaut-runtime-groovy"
+	implementation "io.micronaut.security:micronaut-security-jwt"
+	implementation "io.micronaut.serde:micronaut-serde-jackson"
+	compileOnly "io.micronaut:micronaut-http-client"
+	compileOnly "io.micronaut:micronaut-http-validation"
+	compileOnly "io.micronaut.openapi:micronaut-openapi"
+	compileOnly "io.micronaut.openapi:micronaut-openapi-annotations"
+	compileOnly "io.micronaut.security:micronaut-security-annotations"
+	compileOnly "io.micronaut.serde:micronaut-serde-processor"
+	runtimeOnly "ch.qos.logback:logback-classic"
+	runtimeOnly "org.yaml:snakeyaml"
+	testImplementation "io.micronaut:micronaut-http-client"
+	aotPlugins platform("io.micronaut.platform:micronaut-platform:4.8.2")
+	aotPlugins "io.micronaut.security:micronaut-security-aot"
+	annotationProcessor "io.micronaut.openapi:micronaut-openapi"
+
+	implementation group: 'com.oracle.nosql.sdk', name: 'nosqldriver', version: '5.4.14'
+	implementation group: 'io.micronaut.oraclecloud', name: 'micronaut-oraclecloud-common', version: '4.0.0'
+}
+
+
+application {
+	mainClass = "app.xivgear.Application"
+}
+java {
+	sourceCompatibility = JavaVersion.toVersion "21"
+	targetCompatibility = JavaVersion.toVersion "21"
+}
+
+
+graalvmNative.toolchainDetection = false
+
+micronaut {
+	runtime "netty"
+	testRuntime "junit5"
+	processing {
+		incremental true
+		annotations "app.xivgear.*"
+	}
+	aot {
+		// Please review carefully the optimizations enabled below
+		// Check https://micronaut-projects.github.io/micronaut-aot/latest/guide/ for more details
+		optimizeServiceLoading = false
+		convertYamlToJava = false
+		precomputeOperations = true
+		cacheEnvironment = true
+		optimizeClassLoading = true
+		deduceEnvironment = true
+		optimizeNetty = true
+		replaceLogbackXml = true
+		configurationProperties.put "micronaut.security.jwks.enabled", "false"
+	}
+	dockerfile {
+		args "-XX:+UseG1GC"
+		args "-XX:MinHeapFreeRatio=15"
+		args "-XX:MaxHeapFreeRatio=30"
+		args "-XX:MaxRAMPercentage=70"
+		// TODO measure performance impact
+//		args "-XX:+UseStringDeduplication"
+	}
+}
+
+
+tasks.named("dockerfileNative") {
+	jdkVersion = "21"
+}
+
+tasks.withType(GroovyCompile).configureEach {
+	groovyOptions.configurationScript = file(project.rootDir.toPath().resolve("groovyconfig.groovy").toFile())
+	groovyOptions.fork = true
+	groovyOptions.forkOptions.jvmArgs << '-Dmicronaut.openapi.views.spec=swagger-ui.enabled=true'
+	groovyOptions.forkOptions.jvmArgs << '-Dmicronaut.jsonschema.strictMode=true'
+//	groovyOptions.forkOptions.jvmArgs << '-Dmicronaut.openapi.json.format=true'
+}
+
+test {
+	testLogging {
+		showStandardStreams = true
+		exceptionFormat = TestExceptionFormat.FULL
+		showExceptions = true
+		showCauses = true
+		showStackTraces = true
+	}
+}

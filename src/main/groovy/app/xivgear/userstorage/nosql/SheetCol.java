@@ -1,0 +1,11 @@
+package app.xivgear.userstorage.nosql;
+
+// Child of UserPrefs
+public enum SheetCol {
+	sheet_save_key, // string pk
+	sheet_name,
+	sheet_version,
+	sheet_data,
+	sheet_sort_order,
+	sheet_is_deleted,
+}

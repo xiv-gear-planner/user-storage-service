@@ -1,0 +1,80 @@
+micronaut:
+  application:
+    name: xivgear-account-service
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
+
+  security:
+#    authentication: bearer
+    token:
+      generator:
+        access-token:
+          expiration: 7200
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_GENERATOR_SIGNATURE_SECRET:pleaseChangeThisSecretForANewOne}
+      cookie:
+        session-cookie: true
+    enabled: true
+    authentication: session
+
+  session:
+    filter:
+      enabled: true
+  #
+
+  server:
+    host: 0.0.0.0
+    cors:
+      enabled: true
+  openapi:
+    enabled: true
+  swagger:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+  email:
+    from:
+      email: ${EMAIL_FROM:`noreply@xivgear.app`}
+      name: ${EMAIL_NAME:`Xivgear Email Verification`}
+
+
+oci:
+  config:
+    enabled: false
+
+oracle-nosql:
+  endpoint: "https://nosql.us-sanjose-1.oci.oraclecloud.com:443/"
+  mode: cloud
+  compartment: ${ORACLE_CLOUD_COMPARTMENT_ID:}
+  tables:
+    users:
+      name: "users_test"
+    emails:
+      name: "emails_test"
+    sessions:
+      name: "sessions_test"
+
+# Optional for local testing
+smtp:
+  user: ${EMAIL_USER:}
+  password: ${EMAIL_PASSWORD:}
+
+javamail:
+  properties:
+    mail:
+      smtp:
+        port: 587
+        auth: true
+        starttls:
+          enable: true
+        host: ${EMAIL_HOST:`smtp.email.us-sanjose-1.oci.oraclecloud.com`}
