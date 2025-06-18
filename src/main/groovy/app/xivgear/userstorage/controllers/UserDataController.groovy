@@ -83,10 +83,9 @@ class UserDataController {
 		int uid = Integer.parseInt auth.name
 		// TODO: need patch operation if we want to support partial updates in the future
 		// TODO: timestamp check
-		var qr = users.putByPK uid, [
+		users.putByPK uid, [
 				(UserDataCol.preferences): dm.mapPreferences(prefs.preferences)
 		]
-		log.info "qr: ${qr.properties}"
 	}
 
 	@Get("/sheets")

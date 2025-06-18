@@ -3,6 +3,7 @@ package app.xivgear
 import app.xivgear.userstorage.dto.*
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -182,6 +183,77 @@ class FullFlowTest {
 			assertNull response.body().metadata.sortOrder
 		}
 
+		// Try updating with outdated version
+		// Server has version 6 at this point, so if the client thinks the server only has version 3, then
+		{
+			var sheetReq = new PutSheetRequest().tap {
+				sheetName = 'Test Sheet Updated'
+				sheetData = [foo: 'baz']
+				lastSyncedVersion = 3
+				newSheetVersion = 7    // Trying to set new version while server has 6
+			}
 
+			HttpRequest<PutSheetRequest> req = HttpRequest.PUT(server.URI.resolve("userdata/sheets/${sheetKey}"), sheetReq).tap {
+				addHeaders it
+			}
+			HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			assertEquals HttpStatus.CONFLICT, response.status
+		}
+	}
+	
+	@Test
+	void testUnauth() {
+		
+
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
+			header 'xivgear-csrf', '1'
+		}
+		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.UNAUTHORIZED, response.status
+
+		req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
+			header 'xivgear-csrf', '1'
+		}
+		response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.UNAUTHORIZED, response.status
+
+		var prefs = new UserPreferences().tap {
+			lightMode = true
+		}
+		var prefsReq = new PutPreferencesRequest().tap {
+			preferences = prefs
+		}
+		HttpRequest<PutPreferencesRequest> putReq = HttpRequest.PUT(server.URI.resolve("userdata/preferences"), prefsReq).tap {
+			header 'xivgear-csrf', '1'
+		}
+		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.UNAUTHORIZED, response.status
+	}
+
+	@Test
+	void testValidTokenButNoCsrf() {
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
+			header 'Authorization', "Bearer ${validToken}"
+		}
+		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.FORBIDDEN, response.status
+
+		req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
+			header 'Authorization', "Bearer ${validToken}"
+		}
+		response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.FORBIDDEN, response.status
+
+		var prefs = new UserPreferences().tap {
+			lightMode = true
+		}
+		var prefsReq = new PutPreferencesRequest().tap {
+			preferences = prefs
+		}
+		HttpRequest<PutPreferencesRequest> putReq = HttpRequest.PUT(server.URI.resolve("userdata/preferences"), prefsReq).tap {
+			header 'Authorization', "Bearer ${validToken}"
+		}
+		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.FORBIDDEN, response.status
 	}
 }

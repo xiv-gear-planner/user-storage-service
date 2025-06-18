@@ -1,0 +1,3 @@
+[submodule "common-libs"]
+	path = common-libs
+	url = git@github.com:xiv-gear-planner/java-common-libs.git

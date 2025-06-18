@@ -11,20 +11,15 @@ micronaut:
         mapping: /swagger-ui/**
 
   security:
-#    authentication: bearer
-    token:
-      generator:
-        access-token:
-          expiration: 7200
-      jwt:
-        signatures:
-          secret:
-            generator:
-              secret: ${JWT_GENERATOR_SIGNATURE_SECRET:pleaseChangeThisSecretForANewOne}
-      cookie:
-        session-cookie: true
     enabled: true
-    authentication: session
+    authentication: bearer
+    intercept-url-map:
+      - pattern: /swagger/**
+        access:
+          - isAnonymous()
+      - pattern: /swagger-ui/**
+        access:
+          - isAnonymous()
 
   session:
     filter:
@@ -42,12 +37,6 @@ micronaut:
   swagger-ui:
     enabled: true
 
-  email:
-    from:
-      email: ${EMAIL_FROM:`noreply@xivgear.app`}
-      name: ${EMAIL_NAME:`Xivgear Email Verification`}
-
-
 oci:
   config:
     enabled: false
@@ -57,24 +46,7 @@ oracle-nosql:
   mode: cloud
   compartment: ${ORACLE_CLOUD_COMPARTMENT_ID:}
   tables:
-    users:
-      name: "users_test"
-    emails:
-      name: "emails_test"
-    sessions:
-      name: "sessions_test"
-
-# Optional for local testing
-smtp:
-  user: ${EMAIL_USER:}
-  password: ${EMAIL_PASSWORD:}
-
-javamail:
-  properties:
-    mail:
-      smtp:
-        port: 587
-        auth: true
-        starttls:
-          enable: true
-        host: ${EMAIL_HOST:`smtp.email.us-sanjose-1.oci.oraclecloud.com`}
+    userData:
+      name: "userdata_test"
+    sheets:
+      name: "sheets_test"

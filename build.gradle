@@ -33,11 +33,13 @@ dependencies {
 
 	implementation group: 'com.oracle.nosql.sdk', name: 'nosqldriver', version: '5.4.14'
 	implementation group: 'io.micronaut.oraclecloud', name: 'micronaut-oraclecloud-common', version: '4.0.0'
+
+	implementation project(":common-libs:logging")
 }
 
 
 application {
-	mainClass = "app.xivgear.Application"
+	mainClass = "app.xivgear.userstorage.Application"
 }
 java {
 	sourceCompatibility = JavaVersion.toVersion "21"

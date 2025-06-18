@@ -1,2 +1,10 @@
+pluginManagement {
+	plugins {
+		id 'io.micronaut.library' version '4.5.3'
+	}
+}
+
 rootProject.name = "user-storage"
 
+include ":common-libs"
+include ":common-libs:logging"
