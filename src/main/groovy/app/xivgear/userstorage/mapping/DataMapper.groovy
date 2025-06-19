@@ -29,7 +29,7 @@ class DataMapper {
 		return FieldValue.createFromJson(mapper.writeValueAsString(preferences), null)
 	}
 
-	SheetMetadata toSheetMetadata(MapValue setMeta) {
+	static SheetMetadata toSheetMetadata(MapValue setMeta) {
 		return new SheetMetadata().tap {
 			name = setMeta.getString(SheetCol.sheet_name.name())
 			saveKey = setMeta.getString(SheetCol.sheet_save_key.name())
@@ -40,11 +40,6 @@ class DataMapper {
 			version = setMeta.getInt(SheetCol.sheet_version.name())
 		}
 	}
-
-//	Map<SheetCol, FieldValue> mapSheetMetadata() {
-//
-//		TODO
-//	}
 
 	FieldValue mapToFieldValue(Map<String, ?> map) {
 		return FieldValue.createFromJson(mapper.writeValueAsString(map), null)

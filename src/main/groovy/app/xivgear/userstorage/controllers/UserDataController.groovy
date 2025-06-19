@@ -20,6 +20,7 @@ import io.micronaut.security.rules.SecurityRule
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
+import oracle.nosql.driver.Version
 import oracle.nosql.driver.ops.GetResult
 import oracle.nosql.driver.ops.PutResult
 import oracle.nosql.driver.values.*
@@ -76,15 +77,24 @@ class UserDataController {
 		- the user should have the option to save the local set to a new key
 
 	Note that top-level preferences also need versioning, but this can be done with timestamping
-	 */
+	*/
 
 	@Put("/preferences")
 	void putPrefs(Authentication auth, @Body @Valid PutPreferencesRequest prefs) {
 		int uid = Integer.parseInt auth.name
-		// TODO: need patch operation if we want to support partial updates in the future
-		// TODO: timestamp check
+		int nextSetId = prefs.nextSetId
+		GetResult current = users.get uid
+		if (current.value != null) {
+			// This technically has race conditions but realistically shouldn't be a problem since the system does
+			// not assume that these numbers are unique
+			int existingNext = current.value.getInt(UserDataCol.next_set_id.name())
+			if (existingNext > nextSetId) {
+				nextSetId = existingNext
+			}
+		}
 		users.putByPK uid, [
-				(UserDataCol.preferences): dm.mapPreferences(prefs.preferences)
+				(UserDataCol.preferences): dm.mapPreferences(prefs.preferences),
+				(UserDataCol.next_set_id): new IntegerValue(nextSetId)
 		]
 	}
 
@@ -128,6 +138,7 @@ class UserDataController {
 		int uid = Integer.parseInt auth.name
 		GetResult getResult = sheets.get uid, sheetId
 		MapValue existingSheet = getResult.value
+		Version version
 		// Since the ID is a randomly generated u32, we most likely do not need a concurrency check
 		if (existingSheet != null) {
 			int existingVersion = existingSheet.getInt(SheetCol.sheet_version.name())
@@ -138,6 +149,10 @@ class UserDataController {
 					conflict = true
 				})
 			}
+			version = getResult.version
+		}
+		else {
+			version = null
 		}
 		// TODO: check for a concurrent write
 		PutResult pr = sheets.putByPK(uid, sheetId, [
@@ -145,9 +160,12 @@ class UserDataController {
 				(SheetCol.sheet_name)      : new StringValue(reqBody.sheetName),
 				(SheetCol.sheet_data)      : dm.mapToFieldValue(reqBody.sheetData),
 				(SheetCol.sheet_sort_order): reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder)
-		])
+		], version)
 		if (pr.version == null) {
-			// ???
+			return HttpResponse.status(HttpStatus.CONFLICT).body(new PutSheetResponse().tap {
+				success = false
+				conflict = true
+			})
 		}
 		return HttpResponse.ok(new PutSheetResponse().tap {
 			success = true

@@ -9,4 +9,5 @@ import io.micronaut.serde.annotation.Serdeable;
 public class PutPreferencesRequest {
 	@Nullable
 	public UserPreferences preferences;
+	public int nextSetId;
 }

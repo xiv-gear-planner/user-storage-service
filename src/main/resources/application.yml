@@ -20,6 +20,13 @@ micronaut:
       - pattern: /swagger-ui/**
         access:
           - isAnonymous()
+          -
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_GENERATOR_SIGNATURE_SECRET:pleaseChangeThisSecretForANewOne}
 
   session:
     filter:
@@ -50,3 +57,6 @@ oracle-nosql:
       name: "userdata_test"
     sheets:
       name: "sheets_test"
+
+#auth:
+#  jwt-token: ${JWT_GENERATOR_SIGNATURE_SECRET:pleaseChangeThisSecretForANewOne}

@@ -8,6 +8,7 @@ import io.micronaut.core.annotation.Nullable
 import jakarta.annotation.PostConstruct
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.TableNotFoundException
+import oracle.nosql.driver.Version
 import oracle.nosql.driver.ops.*
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.MapValue
@@ -180,7 +181,7 @@ abstract class RawNoSqlChildTable<ColType extends Enum<ColType>, PkType, ParentC
 	 * @param values The values to put, other than the PK
 	 * @return
 	 */
-	PutResult putByPK(ParentPkType parentPk, PkType pk, Map<ColType, ? extends FieldValue> values) {
+	PutResult putByPK(ParentPkType parentPk, PkType pk, Map<ColType, ? extends FieldValue> values, Version version = null) {
 		Map<Enum, FieldValue> combined = new HashMap()
 		combined[primaryKeyCol] = pkToFieldValue pk
 		combined.putAll values
@@ -194,8 +195,11 @@ abstract class RawNoSqlChildTable<ColType extends Enum<ColType>, PkType, ParentC
 	 * @param values The values. Need not contain the primary key.
 	 * @return
 	 */
-	PutResult put(ParentPkType parentPk, Map<ColType, ? extends FieldValue> values) {
+	PutResult put(ParentPkType parentPk, Map<ColType, ? extends FieldValue> values, Version version = null) {
 		PutRequest pr = new PutRequest().tap {
+			if (version != null) {
+				matchVersion = version
+			}
 			tableName = this.combinedTableName
 			value = new MapValue().tap {
 				values.each {

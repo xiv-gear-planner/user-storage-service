@@ -1,3 +1,12 @@
+micronaut:
+  security:
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_GENERATOR_SIGNATURE_SECRET}
+
 oci:
   tenant-id: ${ORACLE_CLOUD_TENANT_ID}
   user-id: ${ORACLE_CLOUD_USER_ID}
@@ -6,9 +15,11 @@ oci:
   region: ${ORACLE_CLOUD_OBJECT_STORAGE_REGION:`us-sanjose-1`}
 
 oracle-nosql:
-  createTables: ${ORACLE_CLOUD_NOSQL_CREATE_TABLES:false}
+#  createTables: ${ORACLE_CLOUD_NOSQL_CREATE_TABLES:false}
+  createTables: true
   tables:
     userData:
       name: "userdata"
     sheets:
       name: "sheets"
+

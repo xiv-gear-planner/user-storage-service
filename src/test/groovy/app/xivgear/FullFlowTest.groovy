@@ -1,6 +1,7 @@
 package app.xivgear
 
 import app.xivgear.userstorage.dto.*
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.core.type.Argument
@@ -12,7 +13,11 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.netty.DefaultHttpClient
 import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.security.authentication.Authentication
+import io.micronaut.security.token.claims.ClaimsGenerator
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
+import io.micronaut.security.token.jwt.signature.SignatureGeneratorConfiguration
+import io.micronaut.security.token.jwt.signature.secret.SecretSignature
+import io.micronaut.security.token.jwt.signature.secret.SecretSignatureConfiguration
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Inject
@@ -200,10 +205,10 @@ class FullFlowTest {
 			assertEquals HttpStatus.CONFLICT, response.status
 		}
 	}
-	
+
 	@Test
 	void testUnauth() {
-		
+
 
 		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
 			header 'xivgear-csrf', '1'
@@ -256,4 +261,72 @@ class FullFlowTest {
 		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.FORBIDDEN, response.status
 	}
+
+	@Inject
+	ClaimsGenerator cgen
+
+	@CompileDynamic
+	private String generateInvalidToken() {
+		var goodGenerator = tokenGenerator
+		SignatureGeneratorConfiguration badSigCfg = new SecretSignature(new SecretSignatureConfiguration("foo").tap {
+			it.secret = "bad secret with some extra padding to meet min length"
+		})
+		var generator = new JwtTokenGenerator(
+				badSigCfg,
+				goodGenerator.encryptionConfiguration,
+				cgen
+		)
+		Authentication auth = Authentication.build(
+				UID.toString(),
+				['verified'],
+				[userId: UID] as Map<String, Object>
+		)
+		return generator.generateToken(auth, 30 * 60).orElseThrow()
+	}
+
+	@CompileDynamic
+	private String generateSecondaryValidToken() {
+		var goodGenerator = tokenGenerator
+		SignatureGeneratorConfiguration badSigCfg = new SecretSignature(new SecretSignatureConfiguration("foo").tap {
+			it.secret = 'fakeTokenForTestsDoNotTrustFooooooooooooooooooooooo'
+		})
+		var generator = new JwtTokenGenerator(
+				badSigCfg,
+				goodGenerator.encryptionConfiguration,
+				cgen
+		)
+		Authentication auth = Authentication.build(
+				UID.toString(),
+				['verified'],
+				[userId: UID] as Map<String, Object>
+		)
+		return generator.generateToken(auth, 30 * 60).orElseThrow()
+	}
+
+	@Test
+	void testInvalidTokenSignature() {
+		String invalidToken = generateInvalidToken()
+
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
+			header 'Authorization', "Bearer ${invalidToken}"
+			header 'xivgear-csrf', '1'
+		}
+		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.UNAUTHORIZED, response.status
+	}
+
+	// Test using the valid secret so that we make sure our test is actually testing the right thing
+	@Test
+	void testValidTokenSignature() {
+		String invalidToken = generateSecondaryValidToken()
+
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
+			header 'Authorization', "Bearer ${invalidToken}"
+			header 'xivgear-csrf', '1'
+		}
+		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.OK, response.status
+	}
+
+	// TODO: test that requests are rejected if the user does not have the 'verified' role
 }
