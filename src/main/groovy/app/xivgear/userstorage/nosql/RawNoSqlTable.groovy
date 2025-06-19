@@ -15,9 +15,9 @@ import oracle.nosql.driver.values.MapValue
 @Slf4j
 abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 
+	final String tableName
 	protected final ColType primaryKeyCol
 	protected final String primaryKeyColName
-	protected final String tableName
 	protected final NoSQLHandle handle
 	private boolean initialized
 
