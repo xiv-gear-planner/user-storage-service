@@ -78,6 +78,7 @@ class FullFlowTest {
 			assertNull response.body().preferences
 		}
 
+		// Initial preferences upload
 		{
 			var prefs = new UserPreferences().tap {
 				lightMode = true
@@ -94,6 +95,7 @@ class FullFlowTest {
 			assertEquals HttpStatus.OK, response.status
 		}
 
+		// Retrieve uploaded prefs
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
 				addHeaders it
@@ -106,6 +108,7 @@ class FullFlowTest {
 			assertEquals 'foo', response.body().preferences.languageOverride
 		}
 
+		// Update prefs
 		{
 			var prefs = new UserPreferences().tap {
 				lightMode = false
@@ -122,6 +125,7 @@ class FullFlowTest {
 			assertEquals HttpStatus.OK, response.status
 		}
 
+		// Retrieve again
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
 				addHeaders it
@@ -134,6 +138,7 @@ class FullFlowTest {
 			assertEquals 'bar', response.body().preferences.languageOverride
 		}
 
+		// Get sheets - should be empty
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
 				addHeaders it
@@ -141,7 +146,8 @@ class FullFlowTest {
 
 			HttpResponse<GetSheetsResponse> response = client.toBlocking().exchange req, GetSheetsResponse
 			assertEquals HttpStatus.OK, response.status
-//			assertTrue response.body().sheets.isEmpty()
+			assertTrue response.body().sheets.isEmpty()
+			assertTrue response.body().deletedSheets.isEmpty()
 		}
 
 		String sheetKey = 'sheet-save-123-foobar';
@@ -204,6 +210,38 @@ class FullFlowTest {
 			HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 			assertEquals HttpStatus.CONFLICT, response.status
 		}
+		// Try updating with good version
+		// Server has version 6 at this point, so if the client thinks the server only has version 3, then
+		{
+			var sheetReq = new PutSheetRequest().tap {
+				sheetName = 'Test Sheet Updated'
+				sheetData = [foo: 'baz']
+				lastSyncedVersion = 6
+				newSheetVersion = 7    // Trying to set new version while server has 6
+			}
+
+			HttpRequest<PutSheetRequest> req = HttpRequest.PUT(server.URI.resolve("userdata/sheets/${sheetKey}"), sheetReq).tap {
+				addHeaders it
+			}
+			HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			assertEquals HttpStatus.OK, response.status
+		}
+		// Get updated version
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/sheets/${sheetKey}")).tap {
+				addHeaders it
+			}
+
+			HttpResponse<GetSheetResponse> response = client.toBlocking().exchange req, GetSheetResponse
+			assertEquals HttpStatus.OK, response.status
+			assertNotNull response.body()
+			assertEquals([foo: 'baz'], response.body().sheetData)
+			assertEquals 7, response.body().metadata.version
+			assertEquals 'Test Sheet Updated', response.body().metadata.name
+			assertNull response.body().metadata.sortOrder
+		}
+
+		// TODO: sheet deletion
 	}
 
 	@Test
@@ -265,7 +303,6 @@ class FullFlowTest {
 	@Inject
 	ClaimsGenerator cgen
 
-	@CompileDynamic
 	private String generateInvalidToken() {
 		var goodGenerator = tokenGenerator
 		SignatureGeneratorConfiguration badSigCfg = new SecretSignature(new SecretSignatureConfiguration("foo").tap {
@@ -284,7 +321,6 @@ class FullFlowTest {
 		return generator.generateToken(auth, 30 * 60).orElseThrow()
 	}
 
-	@CompileDynamic
 	private String generateSecondaryValidToken() {
 		var goodGenerator = tokenGenerator
 		SignatureGeneratorConfiguration badSigCfg = new SecretSignature(new SecretSignatureConfiguration("foo").tap {
@@ -328,5 +364,40 @@ class FullFlowTest {
 		assertEquals HttpStatus.OK, response.status
 	}
 
-	// TODO: test that requests are rejected if the user does not have the 'verified' role
+	@Test
+	void testUnverifiedUser() {
+		Authentication auth = Authentication.build(
+				UID.toString(),
+				[], // No roles
+				[userId: UID] as Map<String, Object>
+		)
+		String unverifiedToken = tokenGenerator.generateToken(auth, 30 * 60).orElseThrow()
+
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
+			header 'Authorization', "Bearer ${unverifiedToken}"
+			header 'xivgear-csrf', '1'
+		}
+		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.FORBIDDEN, response.status
+
+		req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
+			header 'Authorization', "Bearer ${unverifiedToken}"
+			header 'xivgear-csrf', '1'
+		}
+		response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.FORBIDDEN, response.status
+
+		var prefs = new UserPreferences().tap {
+			lightMode = true
+		}
+		var prefsReq = new PutPreferencesRequest().tap {
+			preferences = prefs
+		}
+		HttpRequest<PutPreferencesRequest> putReq = HttpRequest.PUT(server.URI.resolve("userdata/preferences"), prefsReq).tap {
+			header 'Authorization', "Bearer ${unverifiedToken}"
+			header 'xivgear-csrf', '1'
+		}
+		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
+		assertEquals HttpStatus.FORBIDDEN, response.status
+	}
 }

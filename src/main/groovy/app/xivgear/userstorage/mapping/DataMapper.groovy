@@ -1,5 +1,6 @@
 package app.xivgear.userstorage.mapping
 
+import app.xivgear.userstorage.compression.Compressor
 import app.xivgear.userstorage.dto.SheetMetadata
 import app.xivgear.userstorage.dto.UserPreferences
 import app.xivgear.userstorage.nosql.SheetCol
@@ -7,6 +8,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Context
 import io.micronaut.serde.ObjectMapper
 import jakarta.inject.Singleton
+import oracle.nosql.driver.values.BinaryValue
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.MapValue
 
@@ -16,9 +18,11 @@ import oracle.nosql.driver.values.MapValue
 class DataMapper {
 
 	private final ObjectMapper mapper
+	private final Compressor compressor
 
-	DataMapper(ObjectMapper mapper) {
+	DataMapper(ObjectMapper mapper, Compressor compressor) {
 		this.mapper = mapper
+		this.compressor = compressor
 	}
 
 	UserPreferences toPreferences(MapValue preferencesObject) {
@@ -47,6 +51,18 @@ class DataMapper {
 
 	Map<String, ?> fieldValueToMap(FieldValue value) {
 		return mapper.readValue(value.toJson(), Map)
+	}
+
+	BinaryValue mapToGzipBin(Map<String, ?> map) {
+		return new BinaryValue(compressor.compress(mapper.writeValueAsBytes(map)))
+	}
+
+	Map<String, ?> gzipBinToMap(BinaryValue binVal) {
+		return gzipBinToMap(binVal.value)
+	}
+
+	Map<String, ?> gzipBinToMap(byte[] bin) {
+		return mapper.readValue(compressor.decompress(bin), Map)
 	}
 
 

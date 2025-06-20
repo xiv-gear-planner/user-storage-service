@@ -55,8 +55,14 @@ class OracleNoSqlConnector {
 		NoSQLHandleConfig config = base()
 		SimpleAuthenticationDetailsProvider build = auth.builder.build()
 		SignatureProvider sp = new SignatureProvider(build.tenantId, build.userId, build.fingerprint, new String(build.privateKey.readAllBytes()), null)
-		config.authorizationProvider = sp
-		config.defaultCompartment = compartmentId
+		config.tap {
+			authorizationProvider = sp
+			defaultCompartment = compartmentId
+			requestTimeout = 15_000
+			configureDefaultRetryHandler 10, 2_000
+			rateLimitingEnabled = true
+			defaultRateLimitingPercentage = 0.5
+		}
 		return NoSQLHandleFactory.createNoSQLHandle(config)
 	}
 

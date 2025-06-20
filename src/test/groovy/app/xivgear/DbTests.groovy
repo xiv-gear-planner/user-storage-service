@@ -8,6 +8,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import oracle.nosql.driver.ops.GetResult
+import oracle.nosql.driver.values.BinaryValue
 import oracle.nosql.driver.values.IntegerValue
 import oracle.nosql.driver.values.MapValue
 import oracle.nosql.driver.values.StringValue
@@ -43,15 +44,14 @@ class DbTests {
 		String setPk = "set-save-456-asdf"
 		sheets.putByPK(uid, setPk, [
 				(SheetCol.sheet_name): new StringValue("foo set"),
-				(SheetCol.sheet_data): new MapValue().tap {
-					put "foo", "bar"
-				}
+				(SheetCol.sheet_data_compressed): new BinaryValue("foo bar")
 		])
 
 		GetResult getSetResult = sheets.get uid, setPk
 		assertEquals uid, getSetResult.value.getInt(UserDataCol.user_id.name())
 		assertEquals setPk, getSetResult.value.getString(SheetCol.sheet_save_key.name())
 		assertEquals "foo set", getSetResult.value.getString(SheetCol.sheet_name.name())
+		assertEquals "foo bar", getSetResult.value.getString(SheetCol.sheet_data_compressed.name())
 
 	}
 }

@@ -5,7 +5,7 @@ public enum SheetCol {
 	sheet_save_key, // string pk
 	sheet_name,
 	sheet_version,
-	sheet_data,
+	sheet_data_compressed,
 	sheet_sort_order,
 	sheet_is_deleted,
 }

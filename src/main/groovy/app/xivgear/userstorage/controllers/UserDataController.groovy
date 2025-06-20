@@ -16,7 +16,6 @@ import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
-import io.micronaut.security.rules.SecurityRule
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
@@ -32,7 +31,7 @@ import oracle.nosql.driver.values.*
 @ExecuteOn(TaskExecutors.BLOCKING)
 @SecurityRequirement(name = 'AntiCsrfHeaderAuth')
 @Slf4j
-@Secured(SecurityRule.IS_AUTHENTICATED)
+@Secured('verified')
 class UserDataController {
 
 	private final UserDataTable users
@@ -101,6 +100,7 @@ class UserDataController {
 	@Get("/sheets")
 	GetSheetsResponse getSheetsList(Authentication auth) {
 		int uid = Integer.parseInt auth.name
+		// TODO: this does not need to query the 'data' column
 		List<MapValue> sheetValues = sheets.getAllForParent(uid)
 
 		GetSheetsResponse tap = new GetSheetsResponse().tap { resp ->
@@ -129,7 +129,7 @@ class UserDataController {
 
 		return HttpResponse.ok(new GetSheetResponse().tap {
 			metadata = dm.toSheetMetadata(sheet)
-			sheetData = dm.fieldValueToMap(sheet.get(SheetCol.sheet_data.name()).asMap())
+			sheetData = dm.gzipBinToMap(sheet.getBinary(SheetCol.sheet_data_compressed.name()))
 		})
 	}
 
@@ -154,12 +154,15 @@ class UserDataController {
 		else {
 			version = null
 		}
-		// TODO: check for a concurrent write
+		BinaryValue bin = dm.mapToGzipBin(reqBody.sheetData)
+		if (bin.value.length > 20_000) {
+			return HttpResponse.status(HttpStatus.REQUEST_ENTITY_TOO_LARGE)
+		}
 		PutResult pr = sheets.putByPK(uid, sheetId, [
-				(SheetCol.sheet_version)   : new IntegerValue(reqBody.newSheetVersion),
-				(SheetCol.sheet_name)      : new StringValue(reqBody.sheetName),
-				(SheetCol.sheet_data)      : dm.mapToFieldValue(reqBody.sheetData),
-				(SheetCol.sheet_sort_order): reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder)
+				(SheetCol.sheet_version)        : new IntegerValue(reqBody.newSheetVersion),
+				(SheetCol.sheet_name)           : new StringValue(reqBody.sheetName),
+				(SheetCol.sheet_data_compressed): bin,
+				(SheetCol.sheet_sort_order)     : reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder)
 		], version)
 		if (pr.version == null) {
 			return HttpResponse.status(HttpStatus.CONFLICT).body(new PutSheetResponse().tap {
