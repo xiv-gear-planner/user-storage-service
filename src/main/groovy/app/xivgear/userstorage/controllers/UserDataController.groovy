@@ -101,18 +101,11 @@ class UserDataController {
 	GetSheetsResponse getSheetsList(Authentication auth) {
 		int uid = Integer.parseInt auth.name
 		// TODO: this does not need to query the 'data' column
+		// Fortunately, RUs are much cheaper than WUs, so for now we can just crank up the RUs on the DB
 		List<MapValue> sheetValues = sheets.getAllForParent(uid)
-
 		GetSheetsResponse tap = new GetSheetsResponse().tap { resp ->
-			resp.sheets = []
-			resp.deletedSheets = []
-			sheetValues.forEach { sheet ->
-				if (sheet.getBoolean(SheetCol.sheet_is_deleted.name())) {
-					resp.deletedSheets << sheet.getString(SheetCol.sheet_save_key.name())
-				}
-				else {
-					resp.sheets << dm.toSheetMetadata(sheet)
-				}
+			resp.sheets = sheetValues.collect {
+				return dm.toSheetMetadata(it)
 			}
 		}
 		return tap
@@ -162,7 +155,8 @@ class UserDataController {
 				(SheetCol.sheet_version)        : new IntegerValue(reqBody.newSheetVersion),
 				(SheetCol.sheet_name)           : new StringValue(reqBody.sheetName),
 				(SheetCol.sheet_data_compressed): bin,
-				(SheetCol.sheet_sort_order)     : reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder)
+				(SheetCol.sheet_sort_order)     : reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder),
+				(SheetCol.sheet_is_deleted)     : BooleanValue.falseInstance()
 		], version)
 		if (pr.version == null) {
 			return HttpResponse.status(HttpStatus.CONFLICT).body(new PutSheetResponse().tap {
@@ -177,12 +171,45 @@ class UserDataController {
 	}
 
 	@Delete("/sheets/{sheetId}")
-	DeleteSheetResponse deleteSheet(Authentication auth, String sheetId) {
+	HttpResponse<DeleteSheetResponse> deleteSheet(Authentication auth, String sheetId, @Body DeleteSheetRequest reqBody) {
 		int uid = Integer.parseInt auth.name
-		var dr = sheets.deleteByPk uid, sheetId
-		return new DeleteSheetResponse().tap {
-			deleted = dr.success
+		GetResult getResult = sheets.get uid, sheetId
+		MapValue existingSheet = getResult.value
+		Version version
+		// Since the ID is a randomly generated u32, we most likely do not need a concurrency check
+		if (existingSheet != null) {
+			int existingVersion = existingSheet.getInt(SheetCol.sheet_version.name())
+			if (reqBody.lastSyncedVersion < existingVersion) {
+				// CONFLICT - both sides modified
+				return HttpResponse.status(HttpStatus.CONFLICT).body(new DeleteSheetResponse().tap {
+					success = false
+					conflict = true
+				})
+			}
+			version = getResult.version
 		}
+		else {
+			version = null
+		}
+		BinaryValue bin = new BinaryValue(new byte[]{})
+		// We don't actually delete sheets - we just update the record to indicate that the sheet is deleted
+
+		Map<SheetCol, FieldValue> newValues = [
+				(SheetCol.sheet_version)        : new IntegerValue(reqBody.newSheetVersion),
+				(SheetCol.sheet_data_compressed): bin,
+				(SheetCol.sheet_is_deleted)     : BooleanValue.trueInstance()
+		]
+		PutResult pr = sheets.putByPK(uid, sheetId, newValues, version)
+		if (pr.version == null) {
+			return HttpResponse.status(HttpStatus.CONFLICT).body(new DeleteSheetResponse().tap {
+				success = false
+				conflict = true
+			})
+		}
+		return HttpResponse.ok(new DeleteSheetResponse().tap {
+			success = true
+			conflict = false
+		})
 	}
 
 

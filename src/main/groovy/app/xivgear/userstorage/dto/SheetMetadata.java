@@ -12,5 +12,6 @@ public class SheetMetadata {
 	public String name;
 	public int version;
 	public @Nullable Double sortOrder;
+	public boolean deleted;
 
 }

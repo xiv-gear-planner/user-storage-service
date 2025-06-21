@@ -12,5 +12,4 @@ import java.util.List;
 public class GetSheetsResponse {
 
 	public List<SheetMetadata> sheets;
-	public List<String> deletedSheets;
 }

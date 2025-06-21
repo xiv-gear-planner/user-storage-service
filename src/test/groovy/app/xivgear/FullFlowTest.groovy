@@ -147,7 +147,6 @@ class FullFlowTest {
 			HttpResponse<GetSheetsResponse> response = client.toBlocking().exchange req, GetSheetsResponse
 			assertEquals HttpStatus.OK, response.status
 			assertTrue response.body().sheets.isEmpty()
-			assertTrue response.body().deletedSheets.isEmpty()
 		}
 
 		String sheetKey = 'sheet-save-123-foobar';
@@ -241,7 +240,58 @@ class FullFlowTest {
 			assertNull response.body().metadata.sortOrder
 		}
 
-		// TODO: sheet deletion
+		// Try deleting with outdated version
+		{
+			HttpRequest<?> req = HttpRequest.DELETE(server.URI.resolve("userdata/sheets/${sheetKey}"), new DeleteSheetRequest().tap {
+				it.lastSyncedVersion = 3  // Server has version 7 at this point
+				it.newSheetVersion = 5
+			}).tap {
+				addHeaders it
+			}
+			HttpResponse<DeleteSheetResponse> response = client.toBlocking().exchange req, Argument.of(DeleteSheetResponse), Argument.of(DeleteSheetResponse)
+			assertEquals HttpStatus.CONFLICT, response.status
+			assertFalse response.body().success
+			assertTrue response.body().conflict
+		}
+
+		// Delete sheet
+		{
+			HttpRequest<?> req = HttpRequest.DELETE(server.URI.resolve("userdata/sheets/${sheetKey}"), new DeleteSheetRequest().tap {
+				it.lastSyncedVersion = 7
+				it.newSheetVersion = 8
+			}).tap {
+				addHeaders it
+			}
+			HttpResponse<?> response = client.toBlocking().exchange req
+			assertEquals HttpStatus.OK, response.status
+		}
+
+		// Verify direct get indicates sheet is deleted
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/sheets/${sheetKey}")).tap {
+				addHeaders it
+			}
+
+			HttpResponse<GetSheetResponse> response = client.toBlocking().exchange req, Argument.of(GetSheetResponse), Argument.of(GetSheetResponse)
+			assertEquals HttpStatus.OK, response.status
+			assertTrue response.body().metadata.deleted
+			assertEquals 8, response.body().metadata.version
+		}
+
+		// Verify deleted sheet appears in metadata
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
+				addHeaders it
+			}
+
+			HttpResponse<GetSheetsResponse> response = client.toBlocking().exchange req, GetSheetsResponse
+			assertEquals HttpStatus.OK, response.status
+			assertEquals 1, response.body().sheets.size()
+			assertTrue response.body().sheets[0].deleted
+			assertEquals sheetKey, response.body().sheets[0].saveKey
+			assertEquals 8, response.body().sheets[0].version
+		}
+
 	}
 
 	@Test

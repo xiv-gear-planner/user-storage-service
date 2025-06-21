@@ -42,6 +42,7 @@ class DataMapper {
 				sortOrder = sortOrderValue.getInt()
 			}
 			version = setMeta.getInt(SheetCol.sheet_version.name())
+			deleted = setMeta.getBoolean(SheetCol.sheet_is_deleted.name())
 		}
 	}
 
@@ -62,6 +63,9 @@ class DataMapper {
 	}
 
 	Map<String, ?> gzipBinToMap(byte[] bin) {
+		if (bin == null || bin.length == 0) {
+			return null
+		}
 		return mapper.readValue(compressor.decompress(bin), Map)
 	}
 

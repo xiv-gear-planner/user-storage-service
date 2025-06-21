@@ -5,7 +5,7 @@ import io.micronaut.serde.annotation.Serdeable;
 
 @Introspected(accessKind = Introspected.AccessKind.FIELD)
 @Serdeable
-public class DeleteSheetResponse {
-	public boolean success;
-	public boolean conflict;
+public class DeleteSheetRequest {
+	public int lastSyncedVersion;
+	public int newSheetVersion;
 }
