@@ -2,6 +2,7 @@ package app.xivgear.userstorage.mapping
 
 import app.xivgear.userstorage.compression.Compressor
 import app.xivgear.userstorage.dto.SheetMetadata
+import app.xivgear.userstorage.dto.SheetSummary
 import app.xivgear.userstorage.dto.UserPreferences
 import app.xivgear.userstorage.nosql.SheetCol
 import groovy.transform.CompileStatic
@@ -33,9 +34,8 @@ class DataMapper {
 		return FieldValue.createFromJson(mapper.writeValueAsString(preferences), null)
 	}
 
-	static SheetMetadata toSheetMetadata(MapValue setMeta) {
+	SheetMetadata toSheetMetadata(MapValue setMeta) {
 		return new SheetMetadata().tap {
-			name = setMeta.getString(SheetCol.sheet_name.name())
 			saveKey = setMeta.getString(SheetCol.sheet_save_key.name())
 			FieldValue sortOrderValue = setMeta.get(SheetCol.sheet_sort_order.name())
 			if (sortOrderValue != null && !sortOrderValue.isNull()) {
@@ -43,7 +43,18 @@ class DataMapper {
 			}
 			version = setMeta.getInt(SheetCol.sheet_version.name())
 			deleted = setMeta.getBoolean(SheetCol.sheet_is_deleted.name())
+			if (!deleted) {
+				summary = toSheetSummary(setMeta.get(SheetCol.sheet_summary.name()).asMap())
+			}
 		}
+	}
+
+	SheetSummary toSheetSummary(MapValue summaryColVal) {
+		return mapper.readValue(summaryColVal.toJson(), SheetSummary)
+	}
+
+	FieldValue sheetSummaryToVal(SheetSummary summary) {
+		return FieldValue.createFromJson(mapper.writeValueAsString(summary), null)
 	}
 
 	FieldValue mapToFieldValue(Map<String, ?> map) {

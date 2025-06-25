@@ -121,8 +121,8 @@ class UserDataController {
 		}
 
 		return HttpResponse.ok(new GetSheetResponse().tap {
-			metadata = dm.toSheetMetadata(sheet)
-			sheetData = dm.gzipBinToMap(sheet.getBinary(SheetCol.sheet_data_compressed.name()))
+			metadata = dm.toSheetMetadata sheet
+			sheetData = dm.gzipBinToMap sheet.getBinary(SheetCol.sheet_data_compressed.name())
 		})
 	}
 
@@ -153,7 +153,7 @@ class UserDataController {
 		}
 		PutResult pr = sheets.putByPK(uid, sheetId, [
 				(SheetCol.sheet_version)        : new IntegerValue(reqBody.newSheetVersion),
-				(SheetCol.sheet_name)           : new StringValue(reqBody.sheetName),
+				(SheetCol.sheet_summary)        : dm.sheetSummaryToVal(reqBody.sheetSummary),
 				(SheetCol.sheet_data_compressed): bin,
 				(SheetCol.sheet_sort_order)     : reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder),
 				(SheetCol.sheet_is_deleted)     : BooleanValue.falseInstance()

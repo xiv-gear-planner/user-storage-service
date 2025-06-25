@@ -27,10 +27,10 @@ class SheetsTable extends RawNoSqlChildTable<SheetCol, String, UserDataCol, Inte
 	protected String getTableDdl() {
 		return """CREATE TABLE IF NOT EXISTS ${combinedTableName} (
 ${sheet_save_key} STRING,
-${sheet_name} STRING,
 ${sheet_version} INTEGER,
 ${sheet_data_compressed} BINARY,
 ${sheet_is_deleted} BOOLEAN NOT NULL DEFAULT false,
+${sheet_summary} JSON,
 PRIMARY KEY(${sheet_save_key})
 )"""
 	}

@@ -9,9 +9,9 @@ import io.micronaut.serde.annotation.Serdeable;
 public class SheetMetadata {
 
 	public String saveKey;
-	public String name;
 	public int version;
 	public @Nullable Double sortOrder;
 	public boolean deleted;
+	public SheetSummary summary;
 
 }

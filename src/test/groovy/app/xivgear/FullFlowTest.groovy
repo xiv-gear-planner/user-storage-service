@@ -1,7 +1,6 @@
 package app.xivgear
 
 import app.xivgear.userstorage.dto.*
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.core.type.Argument
@@ -68,6 +67,7 @@ class FullFlowTest {
 	@Test
 	void testFullFlow() {
 		// Should start with no preferences
+		// TODO: verify response headers for caching
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
 				addHeaders it
@@ -149,20 +149,26 @@ class FullFlowTest {
 			assertTrue response.body().sheets.isEmpty()
 		}
 
+		var summary = new SheetSummary().tap {
+			name = 'Test Sheet'
+			level = 100
+			job = 'WHM'
+		}
+
 		String sheetKey = 'sheet-save-123-foobar';
 		// Upload a new sheet
 		{
 			var sheetReq = new PutSheetRequest().tap {
-				sheetName = 'Test Sheet'
 				sheetData = [foo: 'bar']
 				lastSyncedVersion = 5
 				newSheetVersion = 6
+				sheetSummary = summary
 			}
 
 			HttpRequest<PutSheetRequest> req = HttpRequest.PUT(server.URI.resolve("userdata/sheets/${sheetKey}"), sheetReq).tap {
 				addHeaders it
 			}
-			HttpResponse<?> response = client.toBlocking().exchange req
+			HttpResponse<String> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 			assertEquals HttpStatus.OK, response.status
 		}
 
@@ -175,7 +181,9 @@ class FullFlowTest {
 			HttpResponse<GetSheetsResponse> response = client.toBlocking().exchange req, GetSheetsResponse
 			assertEquals HttpStatus.OK, response.status
 			assertEquals 1, response.body().sheets.size()
-			assertEquals 'Test Sheet', response.body().sheets[0].name
+			assertEquals 'Test Sheet', response.body().sheets[0].summary.name
+			assertEquals 'WHM', response.body().sheets[0].summary.job
+			assertEquals false, response.body().sheets[0].summary.multiJob
 			assertNull response.body().sheets[0].sortOrder
 		}
 
@@ -197,10 +205,12 @@ class FullFlowTest {
 		// Server has version 6 at this point, so if the client thinks the server only has version 3, then
 		{
 			var sheetReq = new PutSheetRequest().tap {
-				sheetName = 'Test Sheet Updated'
 				sheetData = [foo: 'baz']
 				lastSyncedVersion = 3
 				newSheetVersion = 7    // Trying to set new version while server has 6
+				sheetSummary = summary.tap {
+					name = 'Sheet Summary Updated'
+				}
 			}
 
 			HttpRequest<PutSheetRequest> req = HttpRequest.PUT(server.URI.resolve("userdata/sheets/${sheetKey}"), sheetReq).tap {
@@ -213,10 +223,12 @@ class FullFlowTest {
 		// Server has version 6 at this point, so if the client thinks the server only has version 3, then
 		{
 			var sheetReq = new PutSheetRequest().tap {
-				sheetName = 'Test Sheet Updated'
 				sheetData = [foo: 'baz']
 				lastSyncedVersion = 6
 				newSheetVersion = 7    // Trying to set new version while server has 6
+				sheetSummary = summary.tap {
+					name = 'Sheet Summary Updated'
+				}
 			}
 
 			HttpRequest<PutSheetRequest> req = HttpRequest.PUT(server.URI.resolve("userdata/sheets/${sheetKey}"), sheetReq).tap {
@@ -236,7 +248,7 @@ class FullFlowTest {
 			assertNotNull response.body()
 			assertEquals([foo: 'baz'], response.body().sheetData)
 			assertEquals 7, response.body().metadata.version
-			assertEquals 'Test Sheet Updated', response.body().metadata.name
+			assertEquals 'Sheet Summary Updated', response.body().metadata.summary.name
 			assertNull response.body().metadata.sortOrder
 		}
 

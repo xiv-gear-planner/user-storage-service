@@ -11,7 +11,6 @@ import oracle.nosql.driver.ops.GetResult
 import oracle.nosql.driver.values.BinaryValue
 import oracle.nosql.driver.values.IntegerValue
 import oracle.nosql.driver.values.MapValue
-import oracle.nosql.driver.values.StringValue
 import org.junit.jupiter.api.Test
 
 import java.nio.charset.StandardCharsets
@@ -44,14 +43,16 @@ class DbTests {
 
 		String setPk = "set-save-456-asdf"
 		sheets.putByPK(uid, setPk, [
-				(SheetCol.sheet_name): new StringValue("foo set"),
+				(SheetCol.sheet_summary): new MapValue().tap {
+					put "foo", "bar"
+				},
 				(SheetCol.sheet_data_compressed): new BinaryValue("foo bar".getBytes(StandardCharsets.UTF_8))
 		])
 
 		GetResult getSetResult = sheets.get uid, setPk
 		assertEquals uid, getSetResult.value.getInt(UserDataCol.user_id.name())
 		assertEquals setPk, getSetResult.value.getString(SheetCol.sheet_save_key.name())
-		assertEquals "foo set", getSetResult.value.getString(SheetCol.sheet_name.name())
+		assertEquals '{"foo":"bar"}', getSetResult.value.get(SheetCol.sheet_summary.name()).toJson()
 		assertEquals "foo bar", new String(getSetResult.value.getBinary(SheetCol.sheet_data_compressed.name()), StandardCharsets.UTF_8)
 
 
