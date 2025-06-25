@@ -163,6 +163,7 @@ class FullFlowTest {
 				lastSyncedVersion = 5
 				newSheetVersion = 6
 				sheetSummary = summary
+				sortOrder = 3.45
 			}
 
 			HttpRequest<PutSheetRequest> req = HttpRequest.PUT(server.URI.resolve("userdata/sheets/${sheetKey}"), sheetReq).tap {
@@ -184,7 +185,7 @@ class FullFlowTest {
 			assertEquals 'Test Sheet', response.body().sheets[0].summary.name
 			assertEquals 'WHM', response.body().sheets[0].summary.job
 			assertEquals false, response.body().sheets[0].summary.multiJob
-			assertNull response.body().sheets[0].sortOrder
+			assertEquals 3.45 as Double, response.body().sheets[0].sortOrder
 		}
 
 		// Get specific sheet
@@ -198,7 +199,7 @@ class FullFlowTest {
 			assertNotNull response.body()
 			assertEquals([foo: 'bar'], response.body().sheetData)
 			assertEquals 6, response.body().metadata.version
-			assertNull response.body().metadata.sortOrder
+			assertEquals 3.45 as Double, response.body().metadata.sortOrder
 		}
 
 		// Try updating with outdated version

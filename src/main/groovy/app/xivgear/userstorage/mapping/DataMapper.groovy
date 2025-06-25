@@ -39,7 +39,7 @@ class DataMapper {
 			saveKey = setMeta.getString(SheetCol.sheet_save_key.name())
 			FieldValue sortOrderValue = setMeta.get(SheetCol.sheet_sort_order.name())
 			if (sortOrderValue != null && !sortOrderValue.isNull()) {
-				sortOrder = sortOrderValue.getInt()
+				sortOrder = sortOrderValue.getDouble()
 			}
 			version = setMeta.getInt(SheetCol.sheet_version.name())
 			deleted = setMeta.getBoolean(SheetCol.sheet_is_deleted.name())

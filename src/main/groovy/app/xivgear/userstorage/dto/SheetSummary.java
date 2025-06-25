@@ -10,9 +10,12 @@ import jakarta.validation.constraints.Size;
 @Introspected(accessKind = Introspected.AccessKind.FIELD)
 @Serdeable
 public class SheetSummary {
-	public @NotNull @Size(max = 64) String job;
-	public @NotNull @Size(max = 128) String name;
+	public @NotNull
+	@Size(max = 64) String job;
+	public @NotNull
+	@Size(max = 128) String name;
 	public boolean multiJob;
 	public int level;
-	public @Nullable @Min(0) Integer isync;
+	public @Nullable
+	@Min(0) Integer isync;
 }

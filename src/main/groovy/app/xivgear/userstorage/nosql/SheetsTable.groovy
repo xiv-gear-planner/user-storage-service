@@ -30,6 +30,7 @@ ${sheet_save_key} STRING,
 ${sheet_version} INTEGER,
 ${sheet_data_compressed} BINARY,
 ${sheet_is_deleted} BOOLEAN NOT NULL DEFAULT false,
+${sheet_sort_order} DOUBLE,
 ${sheet_summary} JSON,
 PRIMARY KEY(${sheet_save_key})
 )"""
