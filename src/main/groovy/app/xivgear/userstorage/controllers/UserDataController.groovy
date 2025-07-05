@@ -86,6 +86,7 @@ class UserDataController {
 	void putPrefs(Authentication auth, @Body @Valid PutPreferencesRequest prefs) {
 		int uid = Integer.parseInt auth.name
 		int nextSetId = prefs.nextSetId
+		// TODO performance - this unnecessarily queries the big column
 		GetResult current = users.get uid
 		if (current.value != null) {
 			// This technically has race conditions but realistically shouldn't be a problem since the system does
@@ -132,6 +133,7 @@ class UserDataController {
 	@Put("/sheets/{sheetId}")
 	HttpResponse<PutSheetResponse> putSheet(Authentication auth, String sheetId, @Body @Valid PutSheetRequest reqBody) {
 		int uid = Integer.parseInt auth.name
+		// TODO performance - this unnecessarily queries the big column
 		GetResult getResult = sheets.get uid, sheetId
 		MapValue existingSheet = getResult.value
 		Version version
@@ -140,7 +142,7 @@ class UserDataController {
 			int existingVersion = existingSheet.getInt(SheetCol.sheet_version.name())
 			if (reqBody.lastSyncedVersion < existingVersion) {
 				// CONFLICT - both sides modified
-				log.info "Sheet conflict: last ${reqBody.lastSyncedVersion} < existing ${existingVersion} (new ${reqBody.newSheetVersion})"
+				log.info "Sheet PUT conflict: last ${reqBody.lastSyncedVersion} < existing ${existingVersion} (new ${reqBody.newSheetVersion})"
 				return HttpResponse.status(HttpStatus.CONFLICT).body(new PutSheetResponse().tap {
 					success = false
 					conflict = true
@@ -180,6 +182,7 @@ class UserDataController {
 	@Delete("/sheets/{sheetId}")
 	HttpResponse<DeleteSheetResponse> deleteSheet(Authentication auth, String sheetId, @Body DeleteSheetRequest reqBody) {
 		int uid = Integer.parseInt auth.name
+		// TODO performance - this unnecessarily queries the big column
 		GetResult getResult = sheets.get uid, sheetId
 		MapValue existingSheet = getResult.value
 		Version version
@@ -188,7 +191,7 @@ class UserDataController {
 			int existingVersion = existingSheet.getInt(SheetCol.sheet_version.name())
 			if (reqBody.lastSyncedVersion < existingVersion) {
 				// CONFLICT - both sides modified
-				log.info "Sheet conflict: last ${reqBody.lastSyncedVersion} < existing ${existingVersion} (new ${reqBody.newSheetVersion})"
+				log.info "Sheet DELETE conflict: last ${reqBody.lastSyncedVersion} < existing ${existingVersion} (new ${reqBody.newSheetVersion})"
 				return HttpResponse.status(HttpStatus.CONFLICT).body(new DeleteSheetResponse().tap {
 					success = false
 					conflict = true
