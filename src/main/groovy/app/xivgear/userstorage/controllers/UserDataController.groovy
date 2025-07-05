@@ -188,6 +188,7 @@ class UserDataController {
 			int existingVersion = existingSheet.getInt(SheetCol.sheet_version.name())
 			if (reqBody.lastSyncedVersion < existingVersion) {
 				// CONFLICT - both sides modified
+				log.info "Sheet conflict: last ${reqBody.lastSyncedVersion} < existing ${existingVersion} (new ${reqBody.newSheetVersion})"
 				return HttpResponse.status(HttpStatus.CONFLICT).body(new DeleteSheetResponse().tap {
 					success = false
 					conflict = true
