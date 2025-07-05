@@ -37,6 +37,9 @@ dependencies {
 	implementation "io.micronaut.validation:micronaut-validation"
 
 	implementation project(":common-libs:logging")
+
+	implementation group: 'org.slf4j', name: 'jul-to-slf4j', version: '2.0.17'
+
 }
 
 

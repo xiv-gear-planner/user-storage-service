@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType
 import io.swagger.v3.oas.annotations.info.Info
 import io.swagger.v3.oas.annotations.security.SecurityScheme
+import org.slf4j.bridge.SLF4JBridgeHandler
+
+import java.util.logging.Logger
 
 @OpenAPIDefinition(
 		info = @Info(
@@ -24,6 +27,8 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme
 @CompileStatic
 class Application {
 	static void main(String[] args) {
+		SLF4JBridgeHandler.removeHandlersForRootLogger()
+		SLF4JBridgeHandler.install()
 		Micronaut.build(args).with {
 			it.args args
 			packages 'app.xivgear.logging'
