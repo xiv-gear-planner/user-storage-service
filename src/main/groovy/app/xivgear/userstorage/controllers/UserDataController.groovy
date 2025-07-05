@@ -148,7 +148,9 @@ class UserDataController {
 			version = null
 		}
 		BinaryValue bin = dm.mapToGzipBin(reqBody.sheetData)
-		if (bin.value.length > 20_000) {
+		// An individual set is limited to 32KiB post-compression which is fairly generous as JSON sets tend to compress
+		// pretty well.
+		if (bin.value.length > 32 * 1024) {
 			return HttpResponse.status(HttpStatus.REQUEST_ENTITY_TOO_LARGE)
 		}
 		PutResult pr = sheets.putByPK(uid, sheetId, [
@@ -158,6 +160,7 @@ class UserDataController {
 				(SheetCol.sheet_sort_order)     : reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder),
 				(SheetCol.sheet_is_deleted)     : BooleanValue.falseInstance()
 		], version)
+		// We failed to put due to a conflicting concurrent write
 		if (pr.version == null) {
 			return HttpResponse.status(HttpStatus.CONFLICT).body(new PutSheetResponse().tap {
 				success = false
