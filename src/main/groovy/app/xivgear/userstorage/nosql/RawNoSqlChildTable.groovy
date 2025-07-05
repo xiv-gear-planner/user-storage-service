@@ -1,6 +1,5 @@
 package app.xivgear.userstorage.nosql
 
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Property
@@ -95,13 +94,13 @@ abstract class RawNoSqlChildTable<ColType extends Enum<ColType>, PkType, ParentC
 		return null
 	}
 
-	List<MapValue> getAllForParent(ParentPkType parentPk) {
+	List<MapValue> getAllForParent(ParentPkType parentPk, @Nullable List<? extends Enum> includeCols = null) {
 		return queryMany([
 				(this.parTbl.primaryKeyCol): this.parTbl.pkToFieldValue(parentPk)
-		])
+		], includeCols)
 	}
 
-	List<MapValue> queryMany(Map<? extends Enum, ? extends FieldValue> where) {
+	List<MapValue> queryMany(Map<? extends Enum, ? extends FieldValue> where, @Nullable List<? extends Enum> includeCols = null) {
 		// Idea: this should automatically do queryIterable if the `where` does not include the primary key
 		var wherePart = where.entrySet().collect {
 			return "${it.key} = \$whr_${it.key}"
@@ -109,9 +108,12 @@ abstract class RawNoSqlChildTable<ColType extends Enum<ColType>, PkType, ParentC
 		var declPart = where.entrySet().collect {
 			return "declare \$whr_${it.key} ${it.value.type.name().toLowerCase()}; "
 		}.join('')
+		String colsPart = includeCols == null ? '*' : includeCols.collect {
+			return it.name()
+		}.join(',')
 		PrepareRequest pr = new PrepareRequest().tap {
 			tableName = this.combinedTableName
-			statement = "${declPart} SELECT * FROM ${this.combinedTableName} WHERE ${wherePart}"
+			statement = "${declPart} SELECT ${colsPart} FROM ${this.combinedTableName} WHERE ${wherePart}"
 		}
 		PrepareResult prepare = handle.prepare pr
 		where.entrySet().forEach {

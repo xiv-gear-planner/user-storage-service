@@ -34,6 +34,10 @@ import oracle.nosql.driver.values.*
 @Secured('verified')
 class UserDataController {
 
+	// Sheet summary should query everything *except* the actual data
+	private static final List<SheetCol> sheetSummaryCols = SheetCol.values().findAll {
+		it != SheetCol.sheet_data_compressed
+	}
 	private final UserDataTable users
 	private final SheetsTable sheets
 	private final DataMapper dm
@@ -102,7 +106,7 @@ class UserDataController {
 		int uid = Integer.parseInt auth.name
 		// TODO: this does not need to query the 'data' column
 		// Fortunately, RUs are much cheaper than WUs, so for now we can just crank up the RUs on the DB
-		List<MapValue> sheetValues = sheets.getAllForParent(uid)
+		List<MapValue> sheetValues = sheets.getAllForParent uid, sheetSummaryCols
 		GetSheetsResponse tap = new GetSheetsResponse().tap { resp ->
 			resp.sheets = sheetValues.collect {
 				return dm.toSheetMetadata(it)
