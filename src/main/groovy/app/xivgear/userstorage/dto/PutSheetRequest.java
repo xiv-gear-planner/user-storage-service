@@ -12,6 +12,7 @@ import java.util.Map;
 public class PutSheetRequest {
 	public int lastSyncedVersion;
 	public int newSheetVersion;
+	public @Nullable Integer newSheetVersionKey;
 	public @Nullable Double sortOrder;
 	public @NotNull Map<String, ?> sheetData;
 	public @NotNull SheetSummary sheetSummary;

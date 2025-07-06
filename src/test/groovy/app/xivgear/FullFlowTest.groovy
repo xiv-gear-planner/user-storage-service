@@ -162,6 +162,7 @@ class FullFlowTest {
 				sheetData = [foo: 'bar']
 				lastSyncedVersion = 5
 				newSheetVersion = 6
+				newSheetVersionKey = null
 				sheetSummary = summary
 				sortOrder = 3.45
 			}
@@ -186,6 +187,7 @@ class FullFlowTest {
 			assertEquals 'WHM', response.body().sheets[0].summary.job
 			assertEquals false, response.body().sheets[0].summary.multiJob
 			assertEquals 3.45 as Double, response.body().sheets[0].sortOrder
+			assertEquals 0, response.body().sheets[0].versionKey
 		}
 
 		// Get specific sheet
@@ -209,6 +211,7 @@ class FullFlowTest {
 				sheetData = [foo: 'baz']
 				lastSyncedVersion = 3
 				newSheetVersion = 7    // Trying to set new version while server has 6
+				newSheetVersionKey = 123
 				sheetSummary = summary.tap {
 					name = 'Sheet Summary Updated'
 				}
@@ -227,6 +230,7 @@ class FullFlowTest {
 				sheetData = [foo: 'baz']
 				lastSyncedVersion = 6
 				newSheetVersion = 7    // Trying to set new version while server has 6
+				newSheetVersionKey = 456
 				sheetSummary = summary.tap {
 					name = 'Sheet Summary Updated'
 				}
@@ -249,6 +253,7 @@ class FullFlowTest {
 			assertNotNull response.body()
 			assertEquals([foo: 'baz'], response.body().sheetData)
 			assertEquals 7, response.body().metadata.version
+			assertEquals 456, response.body().metadata.versionKey
 			assertEquals 'Sheet Summary Updated', response.body().metadata.summary.name
 			assertNull response.body().metadata.sortOrder
 		}
@@ -272,6 +277,7 @@ class FullFlowTest {
 			HttpRequest<?> req = HttpRequest.DELETE(server.URI.resolve("userdata/sheets/${sheetKey}"), new DeleteSheetRequest().tap {
 				it.lastSyncedVersion = 7
 				it.newSheetVersion = 8
+				it.newSheetVersionKey = 789
 			}).tap {
 				addHeaders it
 			}
@@ -289,6 +295,7 @@ class FullFlowTest {
 			assertEquals HttpStatus.OK, response.status
 			assertTrue response.body().metadata.deleted
 			assertEquals 8, response.body().metadata.version
+			assertEquals 789, response.body().metadata.versionKey
 		}
 
 		// Verify deleted sheet appears in metadata
@@ -303,6 +310,7 @@ class FullFlowTest {
 			assertTrue response.body().sheets[0].deleted
 			assertEquals sheetKey, response.body().sheets[0].saveKey
 			assertEquals 8, response.body().sheets[0].version
+			assertEquals 789, response.body().sheets[0].versionKey
 		}
 
 	}

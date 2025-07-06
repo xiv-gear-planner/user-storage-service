@@ -28,6 +28,7 @@ class SheetsTable extends RawNoSqlChildTable<SheetCol, String, UserDataCol, Inte
 		return """CREATE TABLE IF NOT EXISTS ${combinedTableName} (
 ${sheet_save_key} STRING,
 ${sheet_version} INTEGER,
+${sheet_version_key} INTEGER NOT NULL DEFAULT 0,
 ${sheet_data_compressed} BINARY,
 ${sheet_is_deleted} BOOLEAN NOT NULL DEFAULT false,
 ${sheet_sort_order} DOUBLE,

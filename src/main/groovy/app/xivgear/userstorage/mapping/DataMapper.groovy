@@ -42,6 +42,7 @@ class DataMapper {
 				sortOrder = sortOrderValue.getDouble()
 			}
 			version = setMeta.getInt(SheetCol.sheet_version.name())
+			versionKey = setMeta.getInt(SheetCol.sheet_version_key.name())
 			deleted = setMeta.getBoolean(SheetCol.sheet_is_deleted.name())
 			if (!deleted) {
 				summary = toSheetSummary(setMeta.get(SheetCol.sheet_summary.name()).asMap())

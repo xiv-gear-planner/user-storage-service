@@ -161,10 +161,11 @@ class UserDataController {
 		}
 		PutResult pr = sheets.putByPK(uid, sheetId, [
 				(SheetCol.sheet_version)        : new IntegerValue(reqBody.newSheetVersion),
+				(SheetCol.sheet_version_key)    : new IntegerValue(reqBody.newSheetVersionKey ?: 0),
 				(SheetCol.sheet_summary)        : dm.sheetSummaryToVal(reqBody.sheetSummary),
 				(SheetCol.sheet_data_compressed): bin,
 				(SheetCol.sheet_sort_order)     : reqBody.sortOrder == null ? NullValue.instance : new DoubleValue(reqBody.sortOrder),
-				(SheetCol.sheet_is_deleted)     : BooleanValue.falseInstance()
+				(SheetCol.sheet_is_deleted)     : BooleanValue.falseInstance(),
 		], version)
 		// We failed to put due to a conflicting concurrent write
 		if (pr.version == null) {
@@ -207,6 +208,7 @@ class UserDataController {
 
 		Map<SheetCol, FieldValue> newValues = [
 				(SheetCol.sheet_version)        : new IntegerValue(reqBody.newSheetVersion),
+				(SheetCol.sheet_version_key)    : new IntegerValue(reqBody.newSheetVersionKey ?: 0),
 				(SheetCol.sheet_data_compressed): bin,
 				(SheetCol.sheet_is_deleted)     : BooleanValue.trueInstance()
 		]

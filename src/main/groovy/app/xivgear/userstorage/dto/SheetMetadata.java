@@ -10,6 +10,7 @@ public class SheetMetadata {
 
 	public String saveKey;
 	public int version;
+	public int versionKey;
 	public @Nullable Double sortOrder;
 	public boolean deleted;
 	public SheetSummary summary;

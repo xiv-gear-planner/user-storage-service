@@ -8,4 +8,5 @@ public enum SheetCol {
 	sheet_sort_order,
 	sheet_is_deleted,
 	sheet_summary,
+	sheet_version_key,
 }
