@@ -19,4 +19,6 @@ class NoCacheFilter implements Ordered {
 		response.header("Pragma", "no-cache")
 		response.header("Expires", "0")
 	}
+
+	final int order = -20
 }

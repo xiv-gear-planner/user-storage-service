@@ -33,7 +33,7 @@ class OracleNoSqlConnector {
 
 	private NoSQLHandleConfig base() {
 		NoSQLHandleConfig config = new NoSQLHandleConfig(endpoint)
-		config.configureDefaultRetryHandler 8, 1_0000
+		config.configureDefaultRetryHandler 8, 2_500
 		return config
 	}
 
@@ -42,7 +42,7 @@ class OracleNoSqlConnector {
 	NoSQLHandle localNoSqlHandle() {
 		NoSQLHandleConfig config = base()
 		config.authorizationProvider = new StoreAccessTokenProvider()
-		NoSQLHandle handle = NoSQLHandleFactory.createNoSQLHandle(config)
+		NoSQLHandle handle = NoSQLHandleFactory.createNoSQLHandle config
 		return handle
 	}
 
@@ -61,7 +61,11 @@ class OracleNoSqlConnector {
 			requestTimeout = 15_000
 			configureDefaultRetryHandler 10, 2_000
 			rateLimitingEnabled = true
-			defaultRateLimitingPercentage = 0.5
+			// Instead of limiting to 0.5 which would be the most obvious option for two instances, limit to higher.
+			// This allows for us to actually hit the throttling sometimes which gets reported in the OCI dashboard.
+			// The client-side rate limiting ('client' being the user data server) also seems to be a bit more
+			// conservative than the 'true' rate limit (i.e. where you would get throttled).
+			defaultRateLimitingPercentage = 80.0
 		}
 		return NoSQLHandleFactory.createNoSQLHandle(config)
 	}

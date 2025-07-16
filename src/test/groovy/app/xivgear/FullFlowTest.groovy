@@ -64,10 +64,15 @@ class FullFlowTest {
 		req.header 'xivgear-csrf', '1'
 	}
 
+	static void verifyHeaders(HttpResponse<?> resp) {
+		assertEquals 'no-cache', resp.header('Cache-Control')
+		assertEquals 'no-cache', resp.header('Pragma')
+		assertEquals '0', resp.header('Expires')
+	}
+
 	@Test
 	void testFullFlow() {
 		// Should start with no preferences
-		// TODO: verify response headers for caching
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("userdata/preferences")).tap {
 				addHeaders it
@@ -76,6 +81,7 @@ class FullFlowTest {
 			assertEquals HttpStatus.OK, response.status
 			assertFalse response.body().found
 			assertNull response.body().preferences
+			verifyHeaders response
 		}
 
 		// Initial preferences upload
@@ -93,6 +99,7 @@ class FullFlowTest {
 			}
 			HttpResponse<?> response = client.toBlocking().exchange req
 			assertEquals HttpStatus.OK, response.status
+			verifyHeaders response
 		}
 
 		// Retrieve uploaded prefs
@@ -106,6 +113,7 @@ class FullFlowTest {
 			assertTrue response.body().found
 			assertEquals true, response.body().preferences.lightMode
 			assertEquals 'foo', response.body().preferences.languageOverride
+			verifyHeaders response
 		}
 
 		// Update prefs
@@ -123,6 +131,7 @@ class FullFlowTest {
 			}
 			HttpResponse<?> response = client.toBlocking().exchange req
 			assertEquals HttpStatus.OK, response.status
+			verifyHeaders response
 		}
 
 		// Retrieve again
@@ -136,6 +145,7 @@ class FullFlowTest {
 			assertTrue response.body().found
 			assertEquals false, response.body().preferences.lightMode
 			assertEquals 'bar', response.body().preferences.languageOverride
+			verifyHeaders response
 		}
 
 		// Get sheets - should be empty
@@ -147,6 +157,7 @@ class FullFlowTest {
 			HttpResponse<GetSheetsResponse> response = client.toBlocking().exchange req, GetSheetsResponse
 			assertEquals HttpStatus.OK, response.status
 			assertTrue response.body().sheets.isEmpty()
+			verifyHeaders response
 		}
 
 		var summary = new SheetSummary().tap {
@@ -172,6 +183,7 @@ class FullFlowTest {
 			}
 			HttpResponse<String> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 			assertEquals HttpStatus.OK, response.status
+			verifyHeaders response
 		}
 
 		// Verify sheet appears in list
@@ -188,6 +200,7 @@ class FullFlowTest {
 			assertEquals false, response.body().sheets[0].summary.multiJob
 			assertEquals 3.45 as Double, response.body().sheets[0].sortOrder
 			assertEquals 0, response.body().sheets[0].versionKey
+			verifyHeaders response
 		}
 
 		// Get specific sheet
@@ -202,6 +215,7 @@ class FullFlowTest {
 			assertEquals([foo: 'bar'], response.body().sheetData)
 			assertEquals 6, response.body().metadata.version
 			assertEquals 3.45 as Double, response.body().metadata.sortOrder
+			verifyHeaders response
 		}
 
 		// Try updating with outdated version
@@ -222,6 +236,7 @@ class FullFlowTest {
 			}
 			HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 			assertEquals HttpStatus.CONFLICT, response.status
+			verifyHeaders response
 		}
 		// Try updating with good version
 		// Server has version 6 at this point, so if the client thinks the server only has version 3, then
@@ -241,6 +256,7 @@ class FullFlowTest {
 			}
 			HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 			assertEquals HttpStatus.OK, response.status
+			verifyHeaders response
 		}
 		// Get updated version
 		{
@@ -256,6 +272,7 @@ class FullFlowTest {
 			assertEquals 456, response.body().metadata.versionKey
 			assertEquals 'Sheet Summary Updated', response.body().metadata.summary.name
 			assertNull response.body().metadata.sortOrder
+			verifyHeaders response
 		}
 
 		// Try deleting with outdated version
@@ -270,6 +287,7 @@ class FullFlowTest {
 			assertEquals HttpStatus.CONFLICT, response.status
 			assertFalse response.body().success
 			assertTrue response.body().conflict
+			verifyHeaders response
 		}
 
 		// Delete sheet
@@ -283,6 +301,7 @@ class FullFlowTest {
 			}
 			HttpResponse<?> response = client.toBlocking().exchange req
 			assertEquals HttpStatus.OK, response.status
+			verifyHeaders response
 		}
 
 		// Verify direct get indicates sheet is deleted
@@ -296,6 +315,7 @@ class FullFlowTest {
 			assertTrue response.body().metadata.deleted
 			assertEquals 8, response.body().metadata.version
 			assertEquals 789, response.body().metadata.versionKey
+			verifyHeaders response
 		}
 
 		// Verify deleted sheet appears in metadata
@@ -311,6 +331,7 @@ class FullFlowTest {
 			assertEquals sheetKey, response.body().sheets[0].saveKey
 			assertEquals 8, response.body().sheets[0].version
 			assertEquals 789, response.body().sheets[0].versionKey
+			verifyHeaders response
 		}
 
 	}
@@ -324,12 +345,14 @@ class FullFlowTest {
 		}
 		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.UNAUTHORIZED, response.status
+		verifyHeaders response
 
 		req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
 			header 'xivgear-csrf', '1'
 		}
 		response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.UNAUTHORIZED, response.status
+		verifyHeaders response
 
 		var prefs = new UserPreferences().tap {
 			lightMode = true
@@ -342,6 +365,7 @@ class FullFlowTest {
 		}
 		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.UNAUTHORIZED, response.status
+		verifyHeaders response
 	}
 
 	@Test
@@ -351,12 +375,14 @@ class FullFlowTest {
 		}
 		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.FORBIDDEN, response.status
+		verifyHeaders response
 
 		req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
 			header 'Authorization', "Bearer ${validToken}"
 		}
 		response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.FORBIDDEN, response.status
+		verifyHeaders response
 
 		var prefs = new UserPreferences().tap {
 			lightMode = true
@@ -368,6 +394,7 @@ class FullFlowTest {
 			header 'Authorization', "Bearer ${validToken}"
 		}
 		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
+		verifyHeaders response
 		assertEquals HttpStatus.FORBIDDEN, response.status
 	}
 
@@ -420,6 +447,7 @@ class FullFlowTest {
 		}
 		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.UNAUTHORIZED, response.status
+		verifyHeaders response
 	}
 
 	// Test using the valid secret so that we make sure our test is actually testing the right thing
@@ -433,6 +461,7 @@ class FullFlowTest {
 		}
 		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.OK, response.status
+		verifyHeaders response
 	}
 
 	@Test
@@ -450,6 +479,7 @@ class FullFlowTest {
 		}
 		HttpResponse<?> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.FORBIDDEN, response.status
+		verifyHeaders response
 
 		req = HttpRequest.GET(server.URI.resolve("userdata/sheets")).tap {
 			header 'Authorization', "Bearer ${unverifiedToken}"
@@ -457,6 +487,7 @@ class FullFlowTest {
 		}
 		response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.FORBIDDEN, response.status
+		verifyHeaders response
 
 		var prefs = new UserPreferences().tap {
 			lightMode = true
@@ -470,5 +501,6 @@ class FullFlowTest {
 		}
 		response = client.toBlocking().exchange putReq, Argument.of(String), Argument.of(String)
 		assertEquals HttpStatus.FORBIDDEN, response.status
+		verifyHeaders response
 	}
 }
