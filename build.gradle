@@ -2,9 +2,9 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
 	id "groovy"
-	id("io.micronaut.application") version "4.5.3"
-	id("com.gradleup.shadow") version "8.3.6"
-	id("io.micronaut.aot") version "4.5.3"
+	id("io.micronaut.application") version "5.0.1"
+	id("com.gradleup.shadow") version "9.4.1"
+	id("io.micronaut.aot") version "5.0.1"
 }
 
 version = "0.1"
@@ -16,6 +16,7 @@ repositories {
 
 dependencies {
 	implementation "io.micronaut.groovy:micronaut-runtime-groovy"
+	implementation "org.apache.groovy:groovy:6.0.0"
 	implementation "io.micronaut.security:micronaut-security-jwt"
 	implementation "io.micronaut.serde:micronaut-serde-jackson"
 	compileOnly "io.micronaut:micronaut-http-client"
@@ -47,12 +48,9 @@ application {
 	mainClass = "app.xivgear.userstorage.Application"
 }
 java {
-	sourceCompatibility = JavaVersion.toVersion "21"
-	targetCompatibility = JavaVersion.toVersion "21"
+	sourceCompatibility = JavaVersion.toVersion "25"
+	targetCompatibility = JavaVersion.toVersion "25"
 }
-
-
-graalvmNative.toolchainDetection = false
 
 micronaut {
 	runtime "netty"
@@ -75,6 +73,7 @@ micronaut {
 		configurationProperties.put "micronaut.security.jwks.enabled", "false"
 	}
 	dockerfile {
+		args "-XX:+UseCompactObjectHeaders"
 		args "-XX:+UseG1GC"
 		args "-XX:MinHeapFreeRatio=15"
 		args "-XX:MaxHeapFreeRatio=30"
@@ -86,7 +85,12 @@ micronaut {
 
 
 tasks.named("dockerfileNative") {
-	jdkVersion = "21"
+	jdkVersion = "25"
+}
+
+
+tasks.named("dockerfile") {
+	baseImage = 'eclipse-temurin:25'
 }
 
 tasks.withType(GroovyCompile).configureEach {
