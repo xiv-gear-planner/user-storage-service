@@ -43,6 +43,13 @@ dependencies {
 
 }
 
+// Micrometer
+dependencies {
+	implementation("io.micronaut.micrometer:micronaut-micrometer-core")
+	implementation("io.micronaut.micrometer:micronaut-micrometer-registry-prometheus")
+	implementation("io.micronaut:micronaut-management")
+}
+
 
 application {
 	mainClass = "app.xivgear.userstorage.Application"
